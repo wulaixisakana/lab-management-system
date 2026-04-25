@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lab.mapper.LaboratoryMapper">
+
+    <resultMap id="BaseResultMap" type="com.lab.entity.Laboratory">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="code" property="code"/>
+        <result column="building" property="building"/>
+        <result column="floor" property="floor"/>
+        <result column="room_number" property="roomNumber"/>
+        <result column="area" property="area"/>
+        <result column="capacity" property="capacity"/>
+        <result column="supervisor" property="supervisor"/>
+        <result column="phone" property="phone"/>
+        <result column="status" property="status"/>
+        <result column="description" property="description"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <select id="findById" resultMap="BaseResultMap">
+        SELECT * FROM laboratory WHERE id = #{id}
+    </select>
+
+    <select id="findAll" resultMap="BaseResultMap">
+        SELECT * FROM laboratory
+        <where>
+            <if test="name != null and name != ''">
+                AND name LIKE CONCAT('%', #{name}, '%')
+            </if>
+            <if test="building != null and building != ''">
+                AND building = #{building}
+            </if>
+            <if test="status != null and status != ''">
+                AND status = #{status}
+            </if>
+        </where>
+        ORDER BY create_time DESC
+    </select>
+
+    <insert id="insert" parameterType="com.lab.entity.Laboratory" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO laboratory (name, code, building, floor, room_number, area, capacity, supervisor, phone, status, description, create_time)
+        VALUES (#{name}, #{code}, #{building}, #{floor}, #{roomNumber}, #{area}, #{capacity}, #{supervisor}, #{phone}, #{status}, #{description}, NOW())
+    </insert>
+
+    <update id="update" parameterType="com.lab.entity.Laboratory">
+        UPDATE laboratory
+        <set>
+            <if test="name != null and name != ''">name = #{name},</if>
+            <if test="code != null and code != ''">code = #{code},</if>
+            <if test="building != null">building = #{building},</if>
+            <if test="floor != null">floor = #{floor},</if>
+            <if test="roomNumber != null">room_number = #{roomNumber},</if>
+            <if test="area != null">area = #{area},</if>
+            <if test="capacity != null">capacity = #{capacity},</if>
+            <if test="supervisor != null">supervisor = #{supervisor},</if>
+            <if test="phone != null">phone = #{phone},</if>
+            <if test="status != null and status != ''">status = #{status},</if>
+            <if test="description != null">description = #{description},</if>
+            update_time = NOW()
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM laboratory WHERE id = #{id}
+    </delete>
+
+</mapper>

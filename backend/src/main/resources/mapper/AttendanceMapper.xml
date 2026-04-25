@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lab.mapper.AttendanceMapper">
+
+    <resultMap id="BaseResultMap" type="com.lab.entity.Attendance">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="user_name" property="userName"/>
+        <result column="check_in_time" property="checkInTime"/>
+        <result column="check_out_time" property="checkOutTime"/>
+        <result column="status" property="status"/>
+        <result column="duration" property="duration"/>
+        <result column="create_time" property="createTime"/>
+    </resultMap>
+
+    <select id="findById" resultMap="BaseResultMap">
+        SELECT * FROM attendance WHERE id = #{id}
+    </select>
+
+    <select id="findTodayCheckIn" resultMap="BaseResultMap">
+        SELECT * FROM attendance
+        WHERE user_id = #{userId}
+        AND DATE(create_time) = CURDATE()
+        ORDER BY create_time DESC
+        LIMIT 1
+    </select>
+
+    <select id="findByUserId" resultMap="BaseResultMap">
+        SELECT * FROM attendance WHERE user_id = #{userId} ORDER BY create_time DESC
+    </select>
+
+    <select id="findAll" resultMap="BaseResultMap">
+        SELECT * FROM attendance
+        <where>
+            <if test="userName != null and userName != ''">
+                AND user_name LIKE CONCAT('%', #{userName}, '%')
+            </if>
+            <if test="startDate != null and startDate != ''">
+                AND DATE(create_time) &gt;= #{startDate}
+            </if>
+            <if test="endDate != null and endDate != ''">
+                AND DATE(create_time) &lt;= #{endDate}
+            </if>
+        </where>
+        ORDER BY create_time DESC
+    </select>
+
+    <insert id="insert" parameterType="com.lab.entity.Attendance" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO attendance (user_id, user_name, check_in_time, status, create_time)
+        VALUES (#{userId}, #{userName}, #{checkInTime}, #{status}, NOW())
+    </insert>
+
+    <update id="update" parameterType="com.lab.entity.Attendance">
+        UPDATE attendance
+        <set>
+            <if test="checkOutTime != null">check_out_time = #{checkOutTime},</if>
+            <if test="status != null and status != ''">status = #{status},</if>
+            <if test="duration != null">duration = #{duration},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+</mapper>

@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lab.mapper.ReservationMapper">
+
+    <resultMap id="BaseResultMap" type="com.lab.entity.Reservation">
+        <id column="id" property="id"/>
+        <result column="equipment_id" property="equipmentId"/>
+        <result column="user_id" property="userId"/>
+        <result column="user_name" property="userName"/>
+        <result column="equipment_name" property="equipmentName"/>
+        <result column="start_time" property="startTime"/>
+        <result column="end_time" property="endTime"/>
+        <result column="purpose" property="purpose"/>
+        <result column="status" property="status"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <select id="findById" resultMap="BaseResultMap">
+        SELECT * FROM reservation WHERE id = #{id}
+    </select>
+
+    <select id="findByUserId" resultMap="BaseResultMap">
+        SELECT * FROM reservation WHERE user_id = #{userId} ORDER BY create_time DESC
+    </select>
+
+    <select id="findAll" resultMap="BaseResultMap">
+        SELECT * FROM reservation
+        <where>
+            <if test="equipmentName != null and equipmentName != ''">
+                AND equipment_name LIKE CONCAT('%', #{equipmentName}, '%')
+            </if>
+            <if test="userName != null and userName != ''">
+                AND user_name LIKE CONCAT('%', #{userName}, '%')
+            </if>
+            <if test="status != null and status != ''">
+                AND status = #{status}
+            </if>
+        </where>
+        ORDER BY create_time DESC
+    </select>
+
+    <select id="findConflictReservations" resultMap="BaseResultMap">
+        SELECT * FROM reservation
+        WHERE equipment_id = #{equipmentId}
+        AND status IN ('pending', 'approved')
+        AND (
+            (start_time &lt;= #{endTime} AND end_time &gt;= #{startTime})
+            OR (start_time &gt;= #{startTime} AND start_time &lt; #{endTime})
+            OR (end_time &gt; #{startTime} AND end_time &lt;= #{endTime})
+        )
+    </select>
+
+    <insert id="insert" parameterType="com.lab.entity.Reservation" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO reservation (equipment_id, user_id, user_name, equipment_name, start_time, end_time, purpose, status, create_time)
+        VALUES (#{equipmentId}, #{userId}, #{userName}, #{equipmentName}, #{startTime}, #{endTime}, #{purpose}, #{status}, NOW())
+    </insert>
+
+    <update id="update" parameterType="com.lab.entity.Reservation">
+        UPDATE reservation
+        <set>
+            <if test="status != null and status != ''">status = #{status},</if>
+            <if test="purpose != null">purpose = #{purpose},</if>
+            update_time = NOW()
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM reservation WHERE id = #{id}
+    </delete>
+
+</mapper>
