@@ -11,16 +11,18 @@ export async function onRequest(context) {
 
     // 创建新请求
     const headers = new Headers(request.headers);
+    // 设置正确的 Host 头（必须在创建 Request 之前）
+    headers.set('Host', new URL(backendUrl).host);
+    headers.set('X-Forwarded-Host', url.hostname);
+    headers.delete('cf-connecting-ip');
+    headers.delete('cf-ray');
+
     const modifiedRequest = new Request(targetUrl, {
       method: request.method,
       headers,
       body: request.body,
       redirect: 'manual'
     });
-
-    // 设置正确的 Host 头
-    headers.set('Host', new URL(backendUrl).host);
-    headers.set('X-Forwarded-Host', url.hostname);
 
     // 处理 CORS 预检请求
     if (request.method === 'OPTIONS') {
