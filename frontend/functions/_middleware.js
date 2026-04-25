@@ -9,21 +9,6 @@ export async function onRequest(context) {
     // 构建目标 URL（去掉 /api 前缀）
     const targetUrl = backendUrl + url.pathname.replace('/api', '') + url.search;
 
-    // 创建新请求
-    const headers = new Headers(request.headers);
-    // 设置正确的 Host 头（必须在创建 Request 之前）
-    headers.set('Host', new URL(backendUrl).host);
-    headers.set('X-Forwarded-Host', url.hostname);
-    headers.delete('cf-connecting-ip');
-    headers.delete('cf-ray');
-
-    const modifiedRequest = new Request(targetUrl, {
-      method: request.method,
-      headers,
-      body: request.body,
-      redirect: 'manual'
-    });
-
     // 处理 CORS 预检请求
     if (request.method === 'OPTIONS') {
       const requestOrigin = request.headers.get('Origin') || '*';
@@ -38,9 +23,20 @@ export async function onRequest(context) {
       });
     }
 
+    // 只保留必要的请求头，避免 Cloudflare 内部头干扰
+    const cleanHeaders = {
+      'Content-Type': request.headers.get('Content-Type') || 'application/json',
+    };
+    const auth = request.headers.get('Authorization');
+    if (auth) cleanHeaders['Authorization'] = auth;
+
     // 发送请求到后端
     try {
-      const response = await fetch(modifiedRequest);
+      const response = await fetch(targetUrl, {
+        method: request.method,
+        headers: cleanHeaders,
+        body: request.method !== 'GET' && request.method !== 'HEAD' ? request.body : undefined,
+      });
 
       // 复制响应并添加 CORS 头
       const modifiedResponse = new Response(response.body, {
