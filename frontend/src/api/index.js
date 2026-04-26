@@ -41,6 +41,10 @@ export const attendanceApi = {
     checkOut: () => request.post('/attendance/checkout')
 }
 
+export const statisticsApi = {
+    getOverview: () => request.get('/statistics/overview')
+}
+
 export const userApi = {
     getList: () => request.get('/user/list'),
     update: (data) => request.post('/user/update', data),

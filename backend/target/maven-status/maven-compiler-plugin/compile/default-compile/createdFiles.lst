@@ -6,6 +6,7 @@ com\lab\service\ReservationService.class
 com\lab\mapper\UserMapper.class
 com\lab\common\Result.class
 com\lab\mapper\EquipmentMapper.class
+com\lab\controller\StatisticsController.class
 com\lab\mapper\AttendanceMapper.class
 com\lab\mapper\ReservationMapper.class
 com\lab\entity\User.class

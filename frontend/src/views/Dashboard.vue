@@ -60,7 +60,54 @@
             </el-col>
         </el-row>
 
+        <!-- 图表区域 -->
         <el-row :gutter="20" style="margin-top: 20px">
+            <el-col :span="12">
+                <el-card>
+                    <template #header>
+                        <div class="card-header"><span>设备分类统计</span></div>
+                    </template>
+                    <div ref="categoryChartRef" class="chart-container"></div>
+                </el-card>
+            </el-col>
+            <el-col :span="12">
+                <el-card>
+                    <template #header>
+                        <div class="card-header"><span>设备状态分布</span></div>
+                    </template>
+                    <div ref="statusChartRef" class="chart-container"></div>
+                </el-card>
+            </el-col>
+        </el-row>
+
+        <el-row :gutter="20" style="margin-top: 20px">
+            <el-col :span="12">
+                <el-card>
+                    <template #header>
+                        <div class="card-header"><span>近7天预约趋势</span></div>
+                    </template>
+                    <div ref="reservationChartRef" class="chart-container"></div>
+                </el-card>
+            </el-col>
+            <el-col :span="12">
+                <el-card>
+                    <template #header>
+                        <div class="card-header"><span>近7天考勤统计</span></div>
+                    </template>
+                    <div ref="attendanceChartRef" class="chart-container"></div>
+                </el-card>
+            </el-col>
+        </el-row>
+
+        <el-row :gutter="20" style="margin-top: 20px">
+            <el-col :span="12">
+                <el-card>
+                    <template #header>
+                        <div class="card-header"><span>预约状态统计</span></div>
+                    </template>
+                    <div ref="reservationStatusChartRef" class="chart-container"></div>
+                </el-card>
+            </el-col>
             <el-col :span="12">
                 <el-card>
                     <template #header>
@@ -87,7 +134,10 @@
                     </div>
                 </el-card>
             </el-col>
-            <el-col :span="12" v-if="isAdmin || isTeacher">
+        </el-row>
+
+        <el-row :gutter="20" style="margin-top: 20px" v-if="isAdmin || isTeacher">
+            <el-col :span="12">
                 <el-card>
                     <template #header>
                         <div class="card-header">
@@ -110,11 +160,12 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
-import { equipmentApi, attendanceApi, userApi, reservationApi, laboratoryApi } from '@/api'
+import { statisticsApi, attendanceApi } from '@/api'
 import { useUserStore } from '@/stores/user'
 import dayjs from 'dayjs'
+import * as echarts from 'echarts'
 
 const userStore = useUserStore()
 const isAdmin = computed(() => userStore.user?.role === 'admin')
@@ -130,20 +181,169 @@ const stats = ref({
 
 const todayAttendance = ref(null)
 
+const categoryChartRef = ref(null)
+const statusChartRef = ref(null)
+const reservationChartRef = ref(null)
+const attendanceChartRef = ref(null)
+const reservationStatusChartRef = ref(null)
+
+let chartInstances = []
+
+const statusTextMap = {
+    available: '可用',
+    in_use: '使用中',
+    maintenance: '维护中',
+    unavailable: '不可用'
+}
+
+const reservationStatusTextMap = {
+    pending: '待审核',
+    approved: '已通过',
+    rejected: '已拒绝',
+    cancelled: '已取消'
+}
+
+const initCharts = (data) => {
+    chartInstances.forEach(c => c.dispose())
+    chartInstances = []
+
+    // 设备分类饼图
+    if (categoryChartRef.value) {
+        const chart = echarts.init(categoryChartRef.value)
+        const categoryData = Object.entries(data.equipmentCategoryStats || {}).map(([name, value]) => ({ name, value }))
+        chart.setOption({
+            tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+            legend: { bottom: 0 },
+            color: ['#409eff', '#67c23a', '#e6a23c', '#f56c6c', '#909399', '#13c2c2', '#a855f7'],
+            series: [{
+                type: 'pie',
+                radius: ['40%', '65%'],
+                center: ['50%', '45%'],
+                data: categoryData,
+                label: { formatter: '{b}\n{d}%' },
+                emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.2)' } }
+            }]
+        })
+        chartInstances.push(chart)
+    }
+
+    // 设备状态饼图
+    if (statusChartRef.value) {
+        const chart = echarts.init(statusChartRef.value)
+        const statusData = Object.entries(data.equipmentStatusStats || {}).map(([key, value]) => ({
+            name: statusTextMap[key] || key, value
+        }))
+        chart.setOption({
+            tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+            legend: { bottom: 0 },
+            color: ['#67c23a', '#e6a23c', '#909399', '#f56c6c'],
+            series: [{
+                type: 'pie',
+                radius: '60%',
+                center: ['50%', '45%'],
+                data: statusData,
+                label: { formatter: '{b}\n{c}台' },
+                emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.2)' } }
+            }]
+        })
+        chartInstances.push(chart)
+    }
+
+    // 预约趋势折线图
+    if (reservationChartRef.value) {
+        const chart = echarts.init(reservationChartRef.value)
+        const trend = data.reservationTrend || []
+        chart.setOption({
+            tooltip: { trigger: 'axis' },
+            grid: { left: 50, right: 20, top: 20, bottom: 30 },
+            xAxis: {
+                type: 'category',
+                data: trend.map(t => t.date.substring(5)),
+                axisLabel: { fontSize: 12 }
+            },
+            yAxis: { type: 'value', minInterval: 1 },
+            series: [{
+                type: 'line',
+                data: trend.map(t => t.count),
+                smooth: true,
+                areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                    { offset: 0, color: 'rgba(64,158,255,0.3)' },
+                    { offset: 1, color: 'rgba(64,158,255,0.05)' }
+                ])},
+                lineStyle: { color: '#409eff', width: 2 },
+                itemStyle: { color: '#409eff' }
+            }]
+        })
+        chartInstances.push(chart)
+    }
+
+    // 考勤统计柱状图
+    if (attendanceChartRef.value) {
+        const chart = echarts.init(attendanceChartRef.value)
+        const trend = data.attendanceTrend || []
+        chart.setOption({
+            tooltip: { trigger: 'axis' },
+            grid: { left: 50, right: 20, top: 20, bottom: 30 },
+            xAxis: {
+                type: 'category',
+                data: trend.map(t => t.date.substring(5)),
+                axisLabel: { fontSize: 12 }
+            },
+            yAxis: { type: 'value', minInterval: 1 },
+            series: [{
+                type: 'bar',
+                data: trend.map(t => t.count),
+                barWidth: '40%',
+                itemStyle: {
+                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                        { offset: 0, color: '#67c23a' },
+                        { offset: 1, color: '#b7eb8f' }
+                    ]),
+                    borderRadius: [4, 4, 0, 0]
+                }
+            }]
+        })
+        chartInstances.push(chart)
+    }
+
+    // 预约状态环形图
+    if (reservationStatusChartRef.value) {
+        const chart = echarts.init(reservationStatusChartRef.value)
+        const statusData = Object.entries(data.reservationStatusStats || {}).map(([key, value]) => ({
+            name: reservationStatusTextMap[key] || key, value
+        }))
+        chart.setOption({
+            tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+            legend: { bottom: 0 },
+            color: ['#e6a23c', '#67c23a', '#f56c6c', '#909399'],
+            series: [{
+                type: 'pie',
+                radius: ['40%', '65%'],
+                center: ['50%', '45%'],
+                data: statusData,
+                label: { formatter: '{b}\n{d}%' },
+                emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.2)' } }
+            }]
+        })
+        chartInstances.push(chart)
+    }
+}
+
+const handleResize = () => {
+    chartInstances.forEach(c => c.resize())
+}
+
 const loadStats = async () => {
     try {
-        const [equipments, laboratories, reservations, attendances, users] = await Promise.all([
-            equipmentApi.getList({}),
-            laboratoryApi.getList({}),
-            reservationApi.getList({}),
-            attendanceApi.getList({}),
-            userApi.getList()
-        ])
-        stats.value.equipmentCount = equipments?.length || 0
-        stats.value.laboratoryCount = laboratories?.length || 0
-        stats.value.reservationCount = reservations?.length || 0
-        stats.value.attendanceCount = attendances?.length || 0
-        stats.value.userCount = users?.length || 0
+        const data = await statisticsApi.getOverview()
+        stats.value.equipmentCount = data.equipmentCount || 0
+        stats.value.laboratoryCount = data.laboratoryCount || 0
+        stats.value.reservationCount = data.reservationCount || 0
+        stats.value.attendanceCount = data.attendanceCount || 0
+        stats.value.userCount = data.userCount || 0
+
+        await nextTick()
+        initCharts(data)
     } catch (error) {
         console.error(error)
     }
@@ -206,6 +406,12 @@ const getStatusText = (status) => {
 onMounted(() => {
     loadStats()
     loadTodayAttendance()
+    window.addEventListener('resize', handleResize)
+})
+
+onBeforeUnmount(() => {
+    window.removeEventListener('resize', handleResize)
+    chartInstances.forEach(c => c.dispose())
 })
 </script>
 
@@ -305,5 +511,10 @@ onMounted(() => {
 .attendance-status p {
     margin: 10px 0 0 0;
     color: #606266;
+}
+
+.chart-container {
+    height: 300px;
+    width: 100%;
 }
 </style>

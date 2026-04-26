@@ -33,6 +33,7 @@ public class WebConfig implements WebMvcConfigurer {
                         "/user/register",
                         "/equipment/list",
                         "/laboratory/**",
+                        "/statistics/**",
                         "/error"
                 );
     }
