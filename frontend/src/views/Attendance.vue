@@ -5,6 +5,9 @@
                 <div class="card-header">
                     <span>考勤管理</span>
                     <div>
+                        <el-button type="success" @click="handleExport">
+                            <el-icon><Download /></el-icon> 导出Excel
+                        </el-button>
                         <el-button @click="activeTab = 'list'">考勤记录</el-button>
                         <el-button type="primary" @click="activeTab = 'my'">我的考勤</el-button>
                     </div>
@@ -35,7 +38,7 @@
                 </el-button>
             </div>
 
-            <el-table :data="tableData" border style="margin-top: 15px">
+            <el-table :data="pagedData" border style="margin-top: 15px">
                 <el-table-column prop="userName" label="姓名" />
                 <el-table-column prop="checkInTime" label="签到时间" width="180">
                     <template #default="{ row }">{{ formatTime(row.checkInTime) }}</template>
@@ -52,6 +55,14 @@
                     </template>
                 </el-table-column>
             </el-table>
+            <el-pagination
+                style="margin-top: 15px; justify-content: flex-end;"
+                v-model:current-page="currentPage"
+                v-model:page-size="pageSize"
+                :page-sizes="[10, 20, 50]"
+                :total="tableData.length"
+                layout="total, sizes, prev, pager, next"
+            />
         </el-card>
     </div>
 </template>
@@ -59,7 +70,7 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { attendanceApi } from '@/api'
+import { attendanceApi, exportApi } from '@/api'
 import { useUserStore } from '@/stores/user'
 import dayjs from 'dayjs'
 
@@ -68,6 +79,12 @@ const isAdmin = computed(() => userStore.user?.role === 'admin')
 
 const activeTab = ref('list')
 const tableData = ref([])
+const currentPage = ref(1)
+const pageSize = ref(10)
+const pagedData = computed(() => {
+    const start = (currentPage.value - 1) * pageSize.value
+    return tableData.value.slice(start, start + pageSize.value)
+})
 const dateRange = ref([])
 const todayCheckedIn = ref(false)
 const todayCheckedOut = ref(false)
@@ -173,6 +190,10 @@ watch(activeTab, () => {
         loadTodayStatus()
     }
 })
+
+const handleExport = () => {
+    window.open(exportApi.attendance(queryForm.value), '_blank')
+}
 
 onMounted(() => {
     loadList()

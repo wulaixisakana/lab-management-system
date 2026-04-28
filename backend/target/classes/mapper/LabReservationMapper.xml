@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lab.mapper.LabReservationMapper">
+
+    <resultMap id="BaseResultMap" type="com.lab.entity.LabReservation">
+        <id column="id" property="id"/>
+        <result column="laboratory_id" property="laboratoryId"/>
+        <result column="laboratory_name" property="laboratoryName"/>
+        <result column="user_id" property="userId"/>
+        <result column="user_name" property="userName"/>
+        <result column="start_time" property="startTime"/>
+        <result column="end_time" property="endTime"/>
+        <result column="purpose" property="purpose"/>
+        <result column="participant_count" property="participantCount"/>
+        <result column="status" property="status"/>
+        <result column="reject_reason" property="rejectReason"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <select id="findAll" resultMap="BaseResultMap">
+        SELECT * FROM lab_reservation
+        <where>
+            <if test="laboratoryName != null and laboratoryName != ''">
+                AND laboratory_name LIKE CONCAT('%', #{laboratoryName}, '%')
+            </if>
+            <if test="userName != null and userName != ''">
+                AND user_name LIKE CONCAT('%', #{userName}, '%')
+            </if>
+            <if test="status != null and status != ''">
+                AND status = #{status}
+            </if>
+        </where>
+        ORDER BY create_time DESC
+    </select>
+
+    <select id="findByUserId" resultMap="BaseResultMap">
+        SELECT * FROM lab_reservation WHERE user_id = #{userId} ORDER BY create_time DESC
+    </select>
+
+    <select id="findById" resultMap="BaseResultMap">
+        SELECT * FROM lab_reservation WHERE id = #{id}
+    </select>
+
+    <select id="findConflictReservations" resultMap="BaseResultMap">
+        SELECT * FROM lab_reservation
+        WHERE laboratory_id = #{laboratoryId}
+        AND status IN ('pending', 'approved')
+        AND start_time &lt; #{endTime}
+        AND end_time &gt; #{startTime}
+    </select>
+
+    <insert id="insert" parameterType="com.lab.entity.LabReservation" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO lab_reservation (laboratory_id, laboratory_name, user_id, user_name, start_time, end_time, purpose, participant_count, status)
+        VALUES (#{laboratoryId}, #{laboratoryName}, #{userId}, #{userName}, #{startTime}, #{endTime}, #{purpose}, #{participantCount}, #{status})
+    </insert>
+
+    <update id="updateStatus">
+        UPDATE lab_reservation SET status = #{status} WHERE id = #{id}
+    </update>
+
+    <update id="updateStatusWithReason">
+        UPDATE lab_reservation SET status = #{status}, reject_reason = #{rejectReason} WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM lab_reservation WHERE id = #{id}
+    </delete>
+
+</mapper>

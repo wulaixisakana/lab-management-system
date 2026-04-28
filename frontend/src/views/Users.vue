@@ -10,7 +10,7 @@
                 </div>
             </template>
 
-            <el-table :data="tableData" border>
+            <el-table :data="pagedData" border>
                 <el-table-column prop="id" label="ID" width="80" />
                 <el-table-column prop="username" label="用户名" />
                 <el-table-column prop="realName" label="真实姓名" />
@@ -28,13 +28,21 @@
                         </el-tag>
                     </template>
                 </el-table-column>
-                <el-table-column label="操作" width="200" fixed="right">
+                <el-table-column label="操作" width="200">
                     <template #default="{ row }">
                         <el-button type="primary" size="small" @click="handleEdit(row)">编辑</el-button>
                         <el-button type="danger" size="small" @click="handleDelete(row)">删除</el-button>
                     </template>
                 </el-table-column>
             </el-table>
+            <el-pagination
+                style="margin-top: 15px; justify-content: flex-end;"
+                v-model:current-page="currentPage"
+                v-model:page-size="pageSize"
+                :page-sizes="[10, 20, 50]"
+                :total="tableData.length"
+                layout="total, sizes, prev, pager, next"
+            />
         </el-card>
 
         <!-- 用户表单对话框 -->
@@ -78,11 +86,17 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { userApi } from '@/api'
 
 const tableData = ref([])
+const currentPage = ref(1)
+const pageSize = ref(10)
+const pagedData = computed(() => {
+    const start = (currentPage.value - 1) * pageSize.value
+    return tableData.value.slice(start, start + pageSize.value)
+})
 const dialogVisible = ref(false)
 const dialogTitle = ref('')
 const formRef = ref()

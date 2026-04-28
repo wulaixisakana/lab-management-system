@@ -18,7 +18,7 @@ export default defineConfig({
     allowedHosts: ['.cpolar.cn', '.cpolar.top', '.cpolar.io', 'localhost'],
     proxy: {
       '/api': {
-        target: 'http://localhost:8081',
+        target: 'http://47.106.174.92',
         changeOrigin: true,
         rewrite: path => path.replace(/^\/api/, '')
       }

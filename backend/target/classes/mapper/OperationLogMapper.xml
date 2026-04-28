@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lab.mapper.OperationLogMapper">
+
+    <resultMap id="BaseResultMap" type="com.lab.entity.OperationLog">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="user_name" property="userName"/>
+        <result column="module" property="module"/>
+        <result column="action" property="action"/>
+        <result column="detail" property="detail"/>
+        <result column="ip" property="ip"/>
+        <result column="create_time" property="createTime"/>
+    </resultMap>
+
+    <select id="findAll" resultMap="BaseResultMap">
+        SELECT * FROM operation_log
+        <where>
+            <if test="userName != null and userName != ''">
+                AND user_name LIKE CONCAT('%', #{userName}, '%')
+            </if>
+            <if test="module != null and module != ''">
+                AND module = #{module}
+            </if>
+        </where>
+        ORDER BY create_time DESC
+        LIMIT 200
+    </select>
+
+    <insert id="insert" parameterType="com.lab.entity.OperationLog" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO operation_log (user_id, user_name, module, action, detail, ip, create_time)
+        VALUES (#{userId}, #{userName}, #{module}, #{action}, #{detail}, #{ip}, NOW())
+    </insert>
+
+</mapper>

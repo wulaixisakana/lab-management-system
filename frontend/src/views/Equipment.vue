@@ -4,9 +4,14 @@
             <template #header>
                 <div class="card-header">
                     <span>设备列表</span>
-                    <el-button v-if="isAdmin" type="primary" @click="handleAdd">
-                        <el-icon><Plus /></el-icon> 新增设备
-                    </el-button>
+                    <div>
+                        <el-button type="success" @click="handleExport">
+                            <el-icon><Download /></el-icon> 导出Excel
+                        </el-button>
+                        <el-button v-if="isAdmin" type="primary" @click="handleAdd">
+                            <el-icon><Plus /></el-icon> 新增设备
+                        </el-button>
+                    </div>
                 </div>
             </template>
 
@@ -39,12 +44,17 @@
                 </el-form-item>
             </el-form>
 
-            <el-table :data="tableData" border>
-                <el-table-column prop="name" label="设备名称" />
-                <el-table-column prop="code" label="设备编号" />
-                <el-table-column prop="category" label="分类" />
-                <el-table-column prop="brand" label="品牌" />
-                <el-table-column prop="location" label="位置" />
+            <div v-if="isAdmin && selectedRows.length" style="margin-bottom:10px">
+                <el-button type="danger" @click="handleBatchDelete">批量删除 ({{ selectedRows.length }})</el-button>
+            </div>
+
+            <el-table :data="pagedData" border @selection-change="handleSelectionChange">
+                <el-table-column v-if="isAdmin" type="selection" width="45" />
+                <el-table-column prop="name" label="设备名称" min-width="120" />
+                <el-table-column prop="code" label="设备编号" min-width="100" />
+                <el-table-column prop="category" label="分类" min-width="90" />
+                <el-table-column prop="brand" label="品牌" min-width="80" />
+                <el-table-column prop="location" label="位置" min-width="90" />
                 <el-table-column prop="status" label="状态">
                     <template #default="{ row }">
                         <el-tag :type="getStatusType(row.status)">{{ getStatusText(row.status) }}</el-tag>
@@ -53,13 +63,21 @@
                 <el-table-column prop="price" label="价格" width="100">
                     <template #default="{ row }">¥{{ row.price }}</template>
                 </el-table-column>
-                <el-table-column v-if="isAdmin" label="操作" width="180" fixed="right">
+                <el-table-column v-if="isAdmin" label="操作" width="180">
                     <template #default="{ row }">
                         <el-button type="primary" size="small" @click="handleEdit(row)">编辑</el-button>
                         <el-button type="danger" size="small" @click="handleDelete(row)">删除</el-button>
                     </template>
                 </el-table-column>
             </el-table>
+            <el-pagination
+                style="margin-top: 15px; justify-content: flex-end;"
+                v-model:current-page="currentPage"
+                v-model:page-size="pageSize"
+                :page-sizes="[10, 20, 50]"
+                :total="tableData.length"
+                layout="total, sizes, prev, pager, next"
+            />
         </el-card>
 
         <!-- 设备表单对话框 -->
@@ -115,15 +133,21 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { equipmentApi } from '@/api'
+import { equipmentApi, exportApi } from '@/api'
 import { useUserStore } from '@/stores/user'
 
 const userStore = useUserStore()
 const isAdmin = computed(() => userStore.user?.role === 'admin')
 
 const tableData = ref([])
+const currentPage = ref(1)
+const pageSize = ref(10)
+const pagedData = computed(() => {
+    const start = (currentPage.value - 1) * pageSize.value
+    return tableData.value.slice(start, start + pageSize.value)
+})
 const dialogVisible = ref(false)
 const dialogTitle = ref('')
 const formRef = ref()
@@ -245,6 +269,37 @@ const getStatusText = (status) => {
     }
     return texts[status] || status
 }
+
+const handleExport = () => {
+    window.open(exportApi.equipment(queryForm.value), '_blank')
+}
+
+const selectedRows = ref([])
+const handleSelectionChange = (rows) => {
+    selectedRows.value = rows
+}
+const handleBatchDelete = async () => {
+    try {
+        await ElMessageBox.confirm(`确定删除选中的 ${selectedRows.value.length} 个设备吗？`, '批量删除', { type: 'warning' })
+        for (const row of selectedRows.value) {
+            await equipmentApi.delete(row.id)
+        }
+        ElMessage.success('批量删除成功')
+        loadList()
+    } catch (error) {
+        if (error !== 'cancel') console.error(error)
+    }
+}
+
+let searchTimer = null
+const debouncedSearch = () => {
+    clearTimeout(searchTimer)
+    searchTimer = setTimeout(() => loadList(), 400)
+}
+
+onUnmounted(() => {
+    clearTimeout(searchTimer)
+})
 
 onMounted(() => {
     loadList()

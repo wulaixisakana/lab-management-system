@@ -34,6 +34,7 @@ public class WebConfig implements WebMvcConfigurer {
                         "/equipment/list",
                         "/laboratory/**",
                         "/statistics/**",
+                        "/export/**",
                         "/error"
                 );
     }

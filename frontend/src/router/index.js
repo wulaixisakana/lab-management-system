@@ -44,16 +44,34 @@ const routes = [
                 meta: { title: '设备预约' }
             },
             {
+                path: 'lab-reservation',
+                name: 'LabReservation',
+                component: () => import('@/views/LabReservation.vue'),
+                meta: { title: '实验室预约' }
+            },
+            {
                 path: 'attendance',
                 name: 'Attendance',
                 component: () => import('@/views/Attendance.vue'),
                 meta: { title: '考勤管理' }
             },
             {
+                path: 'profile',
+                name: 'Profile',
+                component: () => import('@/views/Profile.vue'),
+                meta: { title: '个人中心' }
+            },
+            {
                 path: 'users',
                 name: 'Users',
                 component: () => import('@/views/Users.vue'),
                 meta: { title: '用户管理', requiresAdmin: true }
+            },
+            {
+                path: 'logs',
+                name: 'OperationLog',
+                component: () => import('@/views/OperationLog.vue'),
+                meta: { title: '操作日志', requiresAdmin: true }
             }
         ]
     }

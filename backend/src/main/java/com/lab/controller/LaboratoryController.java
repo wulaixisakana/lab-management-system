@@ -1,5 +1,7 @@
 package com.lab.controller;
 
+import com.lab.annotation.Log;
+import com.lab.annotation.RequireRole;
 import com.lab.common.Result;
 import com.lab.entity.Laboratory;
 import com.lab.service.LaboratoryService;
@@ -10,7 +12,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/laboratory")
-@CrossOrigin
 public class LaboratoryController {
 
     @Resource
@@ -37,6 +38,8 @@ public class LaboratoryController {
         }
     }
 
+    @RequireRole({"admin"})
+    @Log(module = "实验室", action = "新增实验室")
     @PostMapping("/save")
     public Result<Void> save(@RequestBody Laboratory laboratory) {
         try {
@@ -47,6 +50,8 @@ public class LaboratoryController {
         }
     }
 
+    @RequireRole({"admin"})
+    @Log(module = "实验室", action = "更新实验室")
     @PostMapping("/update")
     public Result<Void> update(@RequestBody Laboratory laboratory) {
         try {
@@ -57,6 +62,8 @@ public class LaboratoryController {
         }
     }
 
+    @RequireRole({"admin"})
+    @Log(module = "实验室", action = "删除实验室")
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Integer id) {
         try {

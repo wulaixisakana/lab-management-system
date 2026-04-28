@@ -5,6 +5,9 @@
                 <div class="card-header">
                     <span>设备预约</span>
                     <div>
+                        <el-button type="success" @click="handleExport">
+                            <el-icon><Download /></el-icon> 导出Excel
+                        </el-button>
                         <el-button @click="activeTab = 'list'">预约列表</el-button>
                         <el-button type="primary" @click="activeTab = 'my'">我的预约</el-button>
                     </div>
@@ -34,13 +37,19 @@
                 </el-form-item>
             </el-form>
 
-            <el-button v-if="activeTab === 'my'" type="primary" @click="handleCreate">
-                <el-icon><Plus /></el-icon> 新增预约
-            </el-button>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+                <el-button v-if="activeTab === 'my'" type="primary" @click="handleCreate">
+                    <el-icon><Plus /></el-icon> 新增预约
+                </el-button>
+                <el-button v-if="isAdmin && activeTab === 'list' && selectedRows.length" type="danger" @click="handleBatchDelete">
+                    批量删除 ({{ selectedRows.length }})
+                </el-button>
+            </div>
 
-            <el-table :data="tableData" border style="margin-top: 15px">
-                <el-table-column prop="equipmentName" label="设备名称" />
-                <el-table-column prop="userName" label="预约人" />
+            <el-table :data="pagedData" border style="margin-top: 15px" @selection-change="handleSelectionChange">
+                <el-table-column v-if="isAdmin && activeTab === 'list'" type="selection" width="45" />
+                <el-table-column prop="equipmentName" label="设备名称" min-width="120" />
+                <el-table-column prop="userName" label="预约人" min-width="80" />
                 <el-table-column prop="startTime" label="开始时间" width="180">
                     <template #default="{ row }">{{ formatTime(row.startTime) }}</template>
                 </el-table-column>
@@ -53,7 +62,13 @@
                         <el-tag :type="getStatusType(row.status)">{{ getStatusText(row.status) }}</el-tag>
                     </template>
                 </el-table-column>
-                <el-table-column label="操作" width="200" fixed="right">
+                <el-table-column prop="rejectReason" label="拒绝理由" min-width="120">
+                    <template #default="{ row }">
+                        <span v-if="row.rejectReason" style="color:#f56c6c">{{ row.rejectReason }}</span>
+                        <span v-else style="color:#c0c4cc">-</span>
+                    </template>
+                </el-table-column>
+                <el-table-column label="操作" width="200">
                     <template #default="{ row }">
                         <el-button v-if="canApprove(row) && activeTab === 'list'" type="success" size="small" @click="handleApprove(row)">
                             通过
@@ -70,6 +85,14 @@
                     </template>
                 </el-table-column>
             </el-table>
+            <el-pagination
+                style="margin-top: 15px; justify-content: flex-end;"
+                v-model:current-page="currentPage"
+                v-model:page-size="pageSize"
+                :page-sizes="[10, 20, 50]"
+                :total="tableData.length"
+                layout="total, sizes, prev, pager, next"
+            />
         </el-card>
 
         <!-- 新增预约对话框 -->
@@ -99,9 +122,9 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { reservationApi, equipmentApi } from '@/api'
+import { reservationApi, equipmentApi, exportApi } from '@/api'
 import { useUserStore } from '@/stores/user'
 import dayjs from 'dayjs'
 
@@ -111,6 +134,12 @@ const isTeacher = computed(() => userStore.user?.role === 'teacher')
 
 const activeTab = ref('list')
 const tableData = ref([])
+const currentPage = ref(1)
+const pageSize = ref(10)
+const pagedData = computed(() => {
+    const start = (currentPage.value - 1) * pageSize.value
+    return tableData.value.slice(start, start + pageSize.value)
+})
 const dialogVisible = ref(false)
 const formRef = ref()
 const equipmentList = ref([])
@@ -208,8 +237,13 @@ const handleApprove = async (row) => {
 
 const handleReject = async (row) => {
     try {
-        await ElMessageBox.confirm('确定拒绝该预约吗？', '提示', { type: 'warning' })
-        await reservationApi.reject(row.id)
+        const { value } = await ElMessageBox.prompt('请输入拒绝理由（可选）', '拒绝预约', {
+            confirmButtonText: '确认拒绝',
+            cancelButtonText: '取消',
+            inputPlaceholder: '请输入拒绝理由',
+            type: 'warning'
+        })
+        await reservationApi.reject(row.id, { reason: value || '' })
         ElMessage.success('已拒绝')
         loadList()
     } catch (error) {
@@ -271,9 +305,40 @@ const getStatusText = (status) => {
     return texts[status] || status
 }
 
+const selectedRows = ref([])
+const handleSelectionChange = (rows) => {
+    selectedRows.value = rows
+}
+const handleBatchDelete = async () => {
+    try {
+        await ElMessageBox.confirm(`确定删除选中的 ${selectedRows.value.length} 条预约记录吗？`, '批量删除', { type: 'warning' })
+        for (const row of selectedRows.value) {
+            await reservationApi.delete(row.id)
+        }
+        ElMessage.success('批量删除成功')
+        loadList()
+    } catch (error) {
+        if (error !== 'cancel') console.error(error)
+    }
+}
+
+let searchTimer = null
+const debouncedSearch = () => {
+    clearTimeout(searchTimer)
+    searchTimer = setTimeout(() => loadList(), 400)
+}
+
 watch(activeTab, () => {
     loadList()
 })
+
+onUnmounted(() => {
+    clearTimeout(searchTimer)
+})
+
+const handleExport = () => {
+    window.open(exportApi.reservation(queryForm.value), '_blank')
+}
 
 onMounted(() => {
     loadList()

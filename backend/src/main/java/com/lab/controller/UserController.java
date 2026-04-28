@@ -1,5 +1,7 @@
 package com.lab.controller;
 
+import com.lab.annotation.Log;
+import com.lab.annotation.RequireRole;
 import com.lab.common.Result;
 import com.lab.entity.User;
 import com.lab.service.UserService;
@@ -13,12 +15,12 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/user")
-@CrossOrigin
 public class UserController {
 
     @Resource
     private UserService userService;
 
+    @Log(module = "用户", action = "登录")
     @PostMapping("/login")
     public Result<Map<String, Object>> login(@RequestBody Map<String, String> params) {
         try {
@@ -31,6 +33,7 @@ public class UserController {
         }
     }
 
+    @Log(module = "用户", action = "注册")
     @PostMapping("/register")
     public Result<Void> register(@RequestBody Map<String, String> params) {
         try {
@@ -59,6 +62,7 @@ public class UserController {
         }
     }
 
+    @RequireRole({"admin"})
     @GetMapping("/list")
     public Result<List<User>> list() {
         try {
@@ -68,6 +72,8 @@ public class UserController {
         }
     }
 
+    @RequireRole({"admin"})
+    @Log(module = "用户", action = "更新用户")
     @PostMapping("/update")
     public Result<Void> update(@RequestBody User user) {
         try {
@@ -78,6 +84,39 @@ public class UserController {
         }
     }
 
+    @PostMapping("/profile")
+    public Result<User> updateProfile(@RequestBody Map<String, String> params, HttpServletRequest request) {
+        try {
+            String token = request.getHeader("Authorization").substring(7);
+            Integer userId = JwtUtil.getUserId(token);
+            User user = userService.findById(userId);
+            if (params.get("realName") != null) user.setRealName(params.get("realName"));
+            if (params.get("phone") != null) user.setPhone(params.get("phone"));
+            if (params.get("email") != null) user.setEmail(params.get("email"));
+            user.setPassword(null);
+            userService.update(user);
+            return Result.success(userService.getUserInfo(userService.findById(userId)));
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    @PostMapping("/changePassword")
+    public Result<Void> changePassword(@RequestBody Map<String, String> params, HttpServletRequest request) {
+        try {
+            String token = request.getHeader("Authorization").substring(7);
+            Integer userId = JwtUtil.getUserId(token);
+            String oldPassword = params.get("oldPassword");
+            String newPassword = params.get("newPassword");
+            userService.changePassword(userId, oldPassword, newPassword);
+            return Result.success();
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    @RequireRole({"admin"})
+    @Log(module = "用户", action = "删除用户")
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Integer id) {
         try {

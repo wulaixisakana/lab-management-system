@@ -4,12 +4,14 @@ import com.lab.entity.Equipment;
 import com.lab.entity.Reservation;
 import com.lab.mapper.EquipmentMapper;
 import com.lab.mapper.ReservationMapper;
+import com.lab.mapper.UserMapper;
 import com.lab.util.JwtUtil;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -22,6 +24,9 @@ public class ReservationService {
 
     @Resource
     private EquipmentMapper equipmentMapper;
+
+    @Resource
+    private UserMapper userMapper;
 
     public List<Reservation> findAll(String equipmentName, String userName, String status) {
         return reservationMapper.findAll(equipmentName, userName, status);
@@ -40,6 +45,7 @@ public class ReservationService {
         String token = request.getHeader("Authorization").substring(7);
         Integer userId = JwtUtil.getUserId(token);
         String username = JwtUtil.getUsername(token);
+        validateTime(reservation.getStartTime(), reservation.getEndTime());
 
         Equipment equipment = equipmentMapper.findById(reservation.getEquipmentId());
         if (equipment == null) {
@@ -62,7 +68,7 @@ public class ReservationService {
         }
 
         reservation.setUserId(userId);
-        reservation.setUserName(username);
+        reservation.setUserName(resolveUserName(userId, username));
         reservation.setEquipmentName(equipment.getName());
         reservation.setStatus("pending");
         reservationMapper.insert(reservation);
@@ -93,12 +99,13 @@ public class ReservationService {
     }
 
     @Transactional
-    public void reject(Integer id) {
+    public void reject(Integer id, String reason) {
         Reservation reservation = reservationMapper.findById(id);
         if (reservation == null) {
             throw new RuntimeException("预约记录不存在");
         }
         reservation.setStatus("rejected");
+        reservation.setRejectReason(reason);
         reservationMapper.update(reservation);
     }
 
@@ -127,5 +134,28 @@ public class ReservationService {
 
     public void deleteById(Integer id) {
         reservationMapper.deleteById(id);
+    }
+
+    private void validateTime(LocalDateTime startTime, LocalDateTime endTime) {
+        if (startTime == null || endTime == null) {
+            throw new RuntimeException("请选择预约开始和结束时间");
+        }
+        if (startTime.isBefore(LocalDateTime.now())) {
+            throw new RuntimeException("开始时间不能早于当前时间");
+        }
+        if (!endTime.isAfter(startTime)) {
+            throw new RuntimeException("结束时间必须晚于开始时间");
+        }
+        if (Duration.between(startTime, endTime).toHours() > 8) {
+            throw new RuntimeException("单次预约时长不能超过8小时");
+        }
+    }
+
+    private String resolveUserName(Integer userId, String username) {
+        com.lab.entity.User user = userMapper.findById(userId);
+        if (user != null && user.getRealName() != null && !user.getRealName().trim().isEmpty()) {
+            return user.getRealName();
+        }
+        return username;
     }
 }

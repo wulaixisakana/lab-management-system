@@ -1,7 +1,7 @@
 <template>
     <div class="dashboard">
         <el-row :gutter="20">
-            <el-col :span="6">
+            <el-col :xs="24" :sm="12" :md="isAdmin ? 6 : 8" :lg="isAdmin ? 4 : 6">
                 <el-card class="stat-card">
                     <div class="stat-content">
                         <el-icon class="stat-icon blue"><Setting /></el-icon>
@@ -12,7 +12,7 @@
                     </div>
                 </el-card>
             </el-col>
-            <el-col :span="6">
+            <el-col :xs="24" :sm="12" :md="isAdmin ? 6 : 8" :lg="isAdmin ? 4 : 6">
                 <el-card class="stat-card">
                     <div class="stat-content">
                         <el-icon class="stat-icon cyan"><OfficeBuilding /></el-icon>
@@ -23,18 +23,31 @@
                     </div>
                 </el-card>
             </el-col>
-            <el-col :span="6">
+            <el-col :xs="24" :sm="12" :md="isAdmin ? 6 : 8" :lg="isAdmin ? 4 : 6">
                 <el-card class="stat-card">
                     <div class="stat-content">
                         <el-icon class="stat-icon green"><Calendar /></el-icon>
                         <div class="stat-info">
                             <h3>{{ stats.reservationCount }}</h3>
-                            <p>预约记录</p>
+                            <p>预约总数</p>
+                            <small>设备 {{ stats.equipmentReservationCount }} / 实验室 {{ stats.labReservationCount }}</small>
                         </div>
                     </div>
                 </el-card>
             </el-col>
-            <el-col :span="6" v-if="isAdmin || isTeacher">
+            <el-col :xs="24" :sm="12" :md="isAdmin ? 6 : 8" :lg="isAdmin ? 4 : 6">
+                <el-card class="stat-card">
+                    <div class="stat-content">
+                        <el-icon class="stat-icon yellow"><Clock /></el-icon>
+                        <div class="stat-info">
+                            <h3>{{ stats.pendingReservationCount }}</h3>
+                            <p>待审核预约</p>
+                            <small>今日新增 {{ stats.todayReservationCount }}</small>
+                        </div>
+                    </div>
+                </el-card>
+            </el-col>
+            <el-col :xs="24" :sm="12" :md="isAdmin ? 6 : 8" :lg="isAdmin ? 4 : 6" v-if="isAdmin || isTeacher">
                 <el-card class="stat-card">
                     <div class="stat-content">
                         <el-icon class="stat-icon orange"><Clock /></el-icon>
@@ -45,9 +58,8 @@
                     </div>
                 </el-card>
             </el-col>
-        </el-row>
-        <el-row :gutter="20" style="margin-top: 20px">
-            <el-col :span="6" v-if="isAdmin">
+            <el-col :xs="24" :sm="12" :md="isAdmin ? 6 : 8" :lg="isAdmin ? 4 : 6" v-if="isAdmin">
+
                 <el-card class="stat-card">
                     <div class="stat-content">
                         <el-icon class="stat-icon purple"><User /></el-icon>
@@ -60,9 +72,63 @@
             </el-col>
         </el-row>
 
+        <!-- 欢迎横幅 -->
+        <el-card class="welcome-banner" style="margin-top: 20px;">
+            <div class="welcome-content">
+                <div class="welcome-left">
+                    <h3>{{ greetingText }}，{{ userStore.user?.realName || '用户' }}！</h3>
+                    <p>今天是 {{ currentDate }}，祝您工作顺利。</p>
+                </div>
+                <div class="welcome-right">
+                    <span class="clock">{{ currentTime }}</span>
+                </div>
+            </div>
+        </el-card>
+
+        <!-- 公告 + 最近操作 -->
+        <el-row :gutter="20" style="margin-top: 20px" v-if="isAdmin">
+            <el-col :xs="24" :md="12">
+                <el-card>
+                    <template #header>
+                        <div class="card-header"><span>系统公告</span></div>
+                    </template>
+                    <el-timeline>
+                        <el-timeline-item timestamp="系统维护" placement="top" type="primary">
+                            系统运行正常，请按需使用各功能模块。
+                        </el-timeline-item>
+                        <el-timeline-item timestamp="温馨提示" placement="top" type="success">
+                            请各位按时签到签退，保持良好考勤记录。
+                        </el-timeline-item>
+                        <el-timeline-item timestamp="使用须知" placement="top" type="warning">
+                            预约设备前请确认设备可用状态，避免冲突。
+                        </el-timeline-item>
+                    </el-timeline>
+                </el-card>
+            </el-col>
+            <el-col :xs="24" :md="12">
+                <el-card>
+                    <template #header>
+                        <div class="card-header"><span>最近操作</span></div>
+                    </template>
+                    <el-table :data="recentLogs" size="small" max-height="220">
+                        <el-table-column prop="userName" label="操作人" width="80" />
+                        <el-table-column prop="module" label="模块" width="60">
+                            <template #default="{ row }">
+                                <el-tag size="small">{{ row.module }}</el-tag>
+                            </template>
+                        </el-table-column>
+                        <el-table-column prop="action" label="操作" />
+                        <el-table-column prop="createTime" label="时间" width="140">
+                            <template #default="{ row }">{{ formatTime(row.createTime) }}</template>
+                        </el-table-column>
+                    </el-table>
+                </el-card>
+            </el-col>
+        </el-row>
+
         <!-- 图表区域 -->
         <el-row :gutter="20" style="margin-top: 20px">
-            <el-col :span="12">
+            <el-col :xs="24" :md="12">
                 <el-card>
                     <template #header>
                         <div class="card-header"><span>设备分类统计</span></div>
@@ -70,7 +136,7 @@
                     <div ref="categoryChartRef" class="chart-container"></div>
                 </el-card>
             </el-col>
-            <el-col :span="12">
+            <el-col :xs="24" :md="12">
                 <el-card>
                     <template #header>
                         <div class="card-header"><span>设备状态分布</span></div>
@@ -81,7 +147,7 @@
         </el-row>
 
         <el-row :gutter="20" style="margin-top: 20px">
-            <el-col :span="12">
+            <el-col :xs="24" :md="12">
                 <el-card>
                     <template #header>
                         <div class="card-header"><span>近7天预约趋势</span></div>
@@ -89,7 +155,7 @@
                     <div ref="reservationChartRef" class="chart-container"></div>
                 </el-card>
             </el-col>
-            <el-col :span="12">
+            <el-col :xs="24" :md="12">
                 <el-card>
                     <template #header>
                         <div class="card-header"><span>近7天考勤统计</span></div>
@@ -100,7 +166,7 @@
         </el-row>
 
         <el-row :gutter="20" style="margin-top: 20px">
-            <el-col :span="12">
+            <el-col :xs="24" :md="12">
                 <el-card>
                     <template #header>
                         <div class="card-header"><span>预约状态统计</span></div>
@@ -108,7 +174,7 @@
                     <div ref="reservationStatusChartRef" class="chart-container"></div>
                 </el-card>
             </el-col>
-            <el-col :span="12">
+            <el-col :xs="24" :md="12">
                 <el-card>
                     <template #header>
                         <div class="card-header">
@@ -132,27 +198,19 @@
                             <el-icon><OfficeBuilding /></el-icon> 实验室管理
                         </el-button>
                     </div>
-                </el-card>
-            </el-col>
-        </el-row>
-
-        <el-row :gutter="20" style="margin-top: 20px" v-if="isAdmin || isTeacher">
-            <el-col :span="12">
-                <el-card>
-                    <template #header>
-                        <div class="card-header">
-                            <span>今日考勤状态</span>
+                    <!-- 今日考勤状态 -->
+                    <div v-if="isAdmin || isTeacher" style="margin-top: 20px; border-top: 1px solid #ebeef5; padding-top: 16px;">
+                        <h4 style="margin: 0 0 12px 0; color: #303133;">今日考勤状态</h4>
+                        <div v-if="todayAttendance" class="attendance-status">
+                            <el-tag :type="getStatusType(todayAttendance.status)">
+                                {{ getStatusText(todayAttendance.status) }}
+                            </el-tag>
+                            <p>签到时间: {{ formatTime(todayAttendance.checkInTime) }}</p>
+                            <p v-if="todayAttendance.checkOutTime">签退时间: {{ formatTime(todayAttendance.checkOutTime) }}</p>
+                            <p v-if="todayAttendance.duration">在岗时长: {{ todayAttendance.duration }} 分钟</p>
                         </div>
-                    </template>
-                    <div v-if="todayAttendance" class="attendance-status">
-                        <el-tag :type="getStatusType(todayAttendance.status)">
-                            {{ getStatusText(todayAttendance.status) }}
-                        </el-tag>
-                        <p>签到时间: {{ formatTime(todayAttendance.checkInTime) }}</p>
-                        <p v-if="todayAttendance.checkOutTime">签退时间: {{ formatTime(todayAttendance.checkOutTime) }}</p>
-                        <p v-if="todayAttendance.duration">在岗时长: {{ todayAttendance.duration }} 分钟</p>
+                        <el-empty v-else description="今日未签到" />
                     </div>
-                    <el-empty v-else description="今日未签到" />
                 </el-card>
             </el-col>
         </el-row>
@@ -162,10 +220,13 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
-import { statisticsApi, attendanceApi } from '@/api'
+import { statisticsApi, attendanceApi, logApi } from '@/api'
 import { useUserStore } from '@/stores/user'
 import dayjs from 'dayjs'
+import 'dayjs/locale/zh-cn'
 import * as echarts from 'echarts'
+
+dayjs.locale('zh-cn')
 
 const userStore = useUserStore()
 const isAdmin = computed(() => userStore.user?.role === 'admin')
@@ -175,11 +236,34 @@ const stats = ref({
     equipmentCount: 0,
     laboratoryCount: 0,
     reservationCount: 0,
+    equipmentReservationCount: 0,
+    labReservationCount: 0,
+    pendingReservationCount: 0,
+    todayReservationCount: 0,
     attendanceCount: 0,
     userCount: 0
 })
 
 const todayAttendance = ref(null)
+const recentLogs = ref([])
+const currentTime = ref('')
+const currentDate = ref('')
+let clockTimer = null
+
+const greetingText = computed(() => {
+    const h = new Date().getHours()
+    if (h < 6) return '凌晨好'
+    if (h < 12) return '上午好'
+    if (h < 14) return '中午好'
+    if (h < 18) return '下午好'
+    return '晚上好'
+})
+
+const updateClock = () => {
+    const now = dayjs()
+    currentTime.value = now.format('HH:mm:ss')
+    currentDate.value = now.format('YYYY年MM月DD日 dddd')
+}
 
 const categoryChartRef = ref(null)
 const statusChartRef = ref(null)
@@ -255,7 +339,8 @@ const initCharts = (data) => {
         const trend = data.reservationTrend || []
         chart.setOption({
             tooltip: { trigger: 'axis' },
-            grid: { left: 50, right: 20, top: 20, bottom: 30 },
+            legend: { data: ['设备预约', '实验室预约'], bottom: 0 },
+            grid: { left: 50, right: 20, top: 20, bottom: 40 },
             xAxis: {
                 type: 'category',
                 data: trend.map(t => t.date.substring(5)),
@@ -263,8 +348,9 @@ const initCharts = (data) => {
             },
             yAxis: { type: 'value', minInterval: 1 },
             series: [{
+                name: '设备预约',
                 type: 'line',
-                data: trend.map(t => t.count),
+                data: trend.map(t => t.eqCount),
                 smooth: true,
                 areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
                     { offset: 0, color: 'rgba(64,158,255,0.3)' },
@@ -272,6 +358,17 @@ const initCharts = (data) => {
                 ])},
                 lineStyle: { color: '#409eff', width: 2 },
                 itemStyle: { color: '#409eff' }
+            }, {
+                name: '实验室预约',
+                type: 'line',
+                data: trend.map(t => t.labCount),
+                smooth: true,
+                areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                    { offset: 0, color: 'rgba(103,126,234,0.3)' },
+                    { offset: 1, color: 'rgba(103,126,234,0.05)' }
+                ])},
+                lineStyle: { color: '#667eea', width: 2 },
+                itemStyle: { color: '#667eea' }
             }]
         })
         chartInstances.push(chart)
@@ -339,6 +436,10 @@ const loadStats = async () => {
         stats.value.equipmentCount = data.equipmentCount || 0
         stats.value.laboratoryCount = data.laboratoryCount || 0
         stats.value.reservationCount = data.reservationCount || 0
+        stats.value.equipmentReservationCount = data.equipmentReservationCount || 0
+        stats.value.labReservationCount = data.labReservationCount || 0
+        stats.value.pendingReservationCount = data.pendingReservationCount || 0
+        stats.value.todayReservationCount = data.todayReservationCount || 0
         stats.value.attendanceCount = data.attendanceCount || 0
         stats.value.userCount = data.userCount || 0
 
@@ -403,15 +504,30 @@ const getStatusText = (status) => {
     return texts[status] || status
 }
 
+const loadRecentLogs = async () => {
+    if (isAdmin.value) {
+        try {
+            const data = await logApi.getList({})
+            recentLogs.value = (data || []).slice(0, 10)
+        } catch (e) {
+            console.error(e)
+        }
+    }
+}
+
 onMounted(() => {
     loadStats()
     loadTodayAttendance()
+    loadRecentLogs()
+    updateClock()
+    clockTimer = setInterval(updateClock, 1000)
     window.addEventListener('resize', handleResize)
 })
 
 onBeforeUnmount(() => {
     window.removeEventListener('resize', handleResize)
     chartInstances.forEach(c => c.dispose())
+    if (clockTimer) clearInterval(clockTimer)
 })
 </script>
 
@@ -471,6 +587,11 @@ onBeforeUnmount(() => {
     color: #13c2c2;
 }
 
+.stat-icon.yellow {
+    background: #fffbe6;
+    color: #faad14;
+}
+
 .stat-info h3 {
     margin: 0 0 5px 0;
     font-size: 28px;
@@ -480,6 +601,11 @@ onBeforeUnmount(() => {
 .stat-info p {
     margin: 0;
     color: #909399;
+}
+
+.stat-info small {
+    color: #b0b0b0;
+    font-size: 12px;
 }
 
 .card-header {
@@ -516,5 +642,40 @@ onBeforeUnmount(() => {
 .chart-container {
     height: 300px;
     width: 100%;
+}
+
+.welcome-banner {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+}
+
+.welcome-banner :deep(.el-card__body) {
+    padding: 20px 24px;
+}
+
+.welcome-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.welcome-left h3 {
+    margin: 0 0 6px 0;
+    font-size: 20px;
+    color: #fff;
+}
+
+.welcome-left p {
+    margin: 0;
+    color: rgba(255,255,255,0.8);
+    font-size: 14px;
+}
+
+.clock {
+    font-size: 36px;
+    font-weight: bold;
+    color: #fff;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 2px;
 }
 </style>

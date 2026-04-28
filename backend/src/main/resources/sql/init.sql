@@ -7,7 +7,7 @@ USE lab_management;
 CREATE TABLE IF NOT EXISTS `user` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `username` VARCHAR(50) NOT NULL UNIQUE COMMENT '用户名',
-    `password` VARCHAR(100) NOT NULL COMMENT '密码',
+    `password` VARCHAR(255) NOT NULL COMMENT '密码',
     `real_name` VARCHAR(50) NOT NULL COMMENT '真实姓名',
     `phone` VARCHAR(20) COMMENT '电话',
     `email` VARCHAR(100) COMMENT '邮箱',
@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS `reservation` (
     `end_time` DATETIME NOT NULL COMMENT '结束时间',
     `purpose` VARCHAR(200) COMMENT '使用目的',
     `status` VARCHAR(20) NOT NULL DEFAULT 'pending' COMMENT '状态：pending/approved/rejected/cancelled',
+    `reject_reason` VARCHAR(500) COMMENT '拒绝理由',
     `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
     `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (`equipment_id`) REFERENCES equipment(`id`) ON DELETE CASCADE,
@@ -71,12 +72,12 @@ ON DUPLICATE KEY UPDATE `username` = `username`;
 
 -- 插入测试教师账号（密码：teacher123）
 INSERT INTO `user` (`username`, `password`, `real_name`, `phone`, `email`, `role`, `status`)
-VALUES ('teacher', '6adfb183a4a2c94a2f92dab5ade762a4', '测试教师', '13800138001', 'teacher@lab.com', 'teacher', 'active')
+VALUES ('teacher', 'a426dcf72ba25d046591f81a5495eab7', '测试教师', '13800138001', 'teacher@lab.com', 'teacher', 'active')
 ON DUPLICATE KEY UPDATE `username` = `username`;
 
 -- 插入测试学生账号（密码：student123）
 INSERT INTO `user` (`username`, `password`, `real_name`, `phone`, `email`, `role`, `status`)
-VALUES ('student', '7549d875442fd40ef4d81e4a6b9333c8', '测试学生', '13800138002', 'student@lab.com', 'student', 'active')
+VALUES ('student', 'ad6a280417a0f533d8b670c61667e1a0', '测试学生', '13800138002', 'student@lab.com', 'student', 'active')
 ON DUPLICATE KEY UPDATE `username` = `username`;
 
 -- 实验室表
@@ -119,3 +120,51 @@ VALUES
     ('电子技术实验室', 'LAB004', '实验楼B', '2F', '201', 55.0, 25, '赵老师', '13800001004', 'available', '用于电子电路实验'),
     ('材料科学实验室', 'LAB005', '实验楼C', '1F', '101', 80.0, 30, '刘老师', '13800001005', 'available', '用于材料性能测试')
 ON DUPLICATE KEY UPDATE `code` = `code`;
+
+-- 通知表
+CREATE TABLE IF NOT EXISTS `notification` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `user_id` INT NOT NULL COMMENT '接收用户ID',
+    `title` VARCHAR(100) NOT NULL COMMENT '通知标题',
+    `content` VARCHAR(500) NOT NULL COMMENT '通知内容',
+    `type` VARCHAR(20) NOT NULL DEFAULT 'system' COMMENT '类型：system/reservation',
+    `is_read` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否已读：0未读/1已读',
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='通知表';
+
+-- 操作日志表
+CREATE TABLE IF NOT EXISTS `operation_log` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `user_id` INT COMMENT '操作用户ID',
+    `user_name` VARCHAR(50) COMMENT '操作用户名',
+    `module` VARCHAR(50) NOT NULL COMMENT '操作模块',
+    `action` VARCHAR(50) NOT NULL COMMENT '操作类型',
+    `detail` VARCHAR(500) COMMENT '操作详情',
+    `ip` VARCHAR(50) COMMENT 'IP地址',
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='操作日志表';
+
+-- 实验室预约表
+CREATE TABLE IF NOT EXISTS `lab_reservation` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `laboratory_id` INT NOT NULL COMMENT '实验室ID',
+    `laboratory_name` VARCHAR(100) COMMENT '实验室名称',
+    `user_id` INT NOT NULL COMMENT '预约用户ID',
+    `user_name` VARCHAR(50) COMMENT '预约用户名',
+    `start_time` DATETIME NOT NULL COMMENT '开始时间',
+    `end_time` DATETIME NOT NULL COMMENT '结束时间',
+    `purpose` VARCHAR(500) COMMENT '使用目的',
+    `participant_count` INT DEFAULT 1 COMMENT '参与人数',
+    `status` VARCHAR(20) NOT NULL DEFAULT 'pending' COMMENT '状态：pending/approved/rejected/cancelled',
+    `reject_reason` VARCHAR(500) COMMENT '拒绝理由',
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='实验室预约表';
+
+-- ============ 增量升级脚本（已有数据库执行） ============
+-- 密码字段扩展（BCrypt 需要 60 字符）
+ALTER TABLE `user` MODIFY COLUMN `password` VARCHAR(255) NOT NULL COMMENT '密码';
+-- 预约拒绝理由
+ALTER TABLE `reservation` ADD COLUMN IF NOT EXISTS `reject_reason` VARCHAR(500) COMMENT '拒绝理由';
+ALTER TABLE `lab_reservation` ADD COLUMN IF NOT EXISTS `reject_reason` VARCHAR(500) COMMENT '拒绝理由';

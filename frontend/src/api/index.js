@@ -28,7 +28,7 @@ export const reservationApi = {
     getById: (id) => request.get(`/reservation/${id}`),
     create: (data) => request.post('/reservation/create', data),
     approve: (id) => request.post(`/reservation/${id}/approve`),
-    reject: (id) => request.post(`/reservation/${id}/reject`),
+    reject: (id, data) => request.post(`/reservation/${id}/reject`, data),
     cancel: (id) => request.post(`/reservation/${id}/cancel`),
     delete: (id) => request.delete(`/reservation/${id}`)
 }
@@ -45,8 +45,38 @@ export const statisticsApi = {
     getOverview: () => request.get('/statistics/overview')
 }
 
+export const labReservationApi = {
+    getList: (params) => request.get('/labReservation/list', { params }),
+    getMy: () => request.get('/labReservation/my'),
+    create: (data) => request.post('/labReservation/create', data),
+    approve: (id) => request.post(`/labReservation/${id}/approve`),
+    reject: (id, data) => request.post(`/labReservation/${id}/reject`, data),
+    cancel: (id) => request.post(`/labReservation/${id}/cancel`),
+    delete: (id) => request.delete(`/labReservation/${id}`)
+}
+
+export const logApi = {
+    getList: (params) => request.get('/log/list', { params })
+}
+
+export const notificationApi = {
+    getList: () => request.get('/notification/list'),
+    markAsRead: (id) => request.post(`/notification/${id}/read`),
+    markAllAsRead: () => request.post('/notification/readAll')
+}
+
+export const exportApi = {
+    equipment: (params) => `/api/export/equipment?${new URLSearchParams(params).toString()}`,
+    reservation: (params) => `/api/export/reservation?${new URLSearchParams(params).toString()}`,
+    attendance: (params) => `/api/export/attendance?${new URLSearchParams(params).toString()}`,
+    labReservation: (params) => `/api/export/labReservation?${new URLSearchParams(params).toString()}`,
+    operationLog: (params) => `/api/export/operationLog?${new URLSearchParams(params).toString()}`
+}
+
 export const userApi = {
     getList: () => request.get('/user/list'),
     update: (data) => request.post('/user/update', data),
-    delete: (id) => request.delete(`/user/${id}`)
+    delete: (id) => request.delete(`/user/${id}`),
+    updateProfile: (data) => request.post('/user/profile', data),
+    changePassword: (data) => request.post('/user/changePassword', data)
 }
